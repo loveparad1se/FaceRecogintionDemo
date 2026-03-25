@@ -1,0 +1,8 @@
+# peach
+train: /root/autodl-tmp/FaceRecognitionDemo/dataset/train/images
+val: /root/autodl-tmp/FaceRecognitionDemo/dataset/valid/images
+
+# Classes
+nc: 1
+names:
+  0: face
