@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>人脸识别打卡系统</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 30px; }
+        .header h1 { font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.2); }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+            gap: 25px;
+        }
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: translateY(-3px); }
+        .card h2 {
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+            padding-left: 15px;
+            color: #333;
+        }
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        video, canvas { width: 100%; height: auto; display: block; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: 0.2s;
+        }
+        .btn:hover { transform: scale(1.02); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        .btn-success { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .btn-warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            display: none;
+            text-align: center;
+            font-weight: bold;
+        }
+        .result.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .result.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .result.info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .records-table th, .records-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .records-table th { background: #f8f9fa; }
+        .scrollable { max-height: 400px; overflow-y: auto; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab {
+            background: none;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+        }
+        .tab.active { color: #667eea; border-bottom: 2px solid #667eea; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        #previewImg { width: 100%; border-radius: 10px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>👤 人脸识别打卡系统</h1>
+        <p>实时检测 | 一键打卡 | 语音反馈</p>
+    </div>
+    <div class="grid">
+        <!-- 摄像头区域 -->
+        <div class="card">
+            <h2>📸 实时摄像头</h2>
+            <div class="video-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas" style="display:none;"></canvas>
+            </div>
+            <div style="text-align: center;">
+                <button class="btn btn-success" onclick="takePhoto('check_in')">📷 上班打卡</button>
+                <button class="btn btn-warning" onclick="takePhoto('check_out')">🏠 下班打卡</button>
+                <button class="btn" onclick="prepareRegister()">📝 拍照注册</button>
+            </div>
+            <div id="attendanceResult" class="result"></div>
+        </div>
+        <!-- 注册表单 -->
+        <div class="card">
+            <h2>📝 员工注册</h2>
+            <div class="form-group">
+                <label>工号 *</label>
+                <input type="text" id="empId" placeholder="请输入工号">
+            </div>
+            <div class="form-group">
+                <label>姓名 *</label>
+                <input type="text" id="empName" placeholder="请输入姓名">
+            </div>
+            <div class="form-group">
+                <label>年龄</label>
+                <input type="number" id="age" placeholder="请输入年龄">
+            </div>
+            <div class="form-group">
+                <label>性别</label>
+                <select id="gender">
+                    <option value="">请选择</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <div id="registerPreview" style="display:none;">
+                <img id="previewImg">
+            </div>
+            <button class="btn" onclick="registerEmployee()">✅ 确认注册</button>
+            <div id="registerResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- 记录区域 -->
+    <div class="card" style="margin-top: 25px;">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('today')">📅 今日打卡</button>
+            <button class="tab" onclick="switchTab('all')">📋 全部记录</button>
+            <button class="tab" onclick="switchTab('employees')">👥 员工列表</button>
+        </div>
+        <div id="tab-today" class="tab-content active">
+            <div style="text-align: right;"><button class="btn" onclick="loadTodayRecords()">🔄 刷新</button></div>
+            <div class="scrollable"><table class="records-table"><thead><tr><th>姓名</th><th>工号</th><th>时间</th><th>类型</th><th>置信度</th></tr></thead><tbody id="todayBody"><tr><td colspan="5">加载中...</td></tr></tbody></table></div>
+        </div>
+        <div id="tab-all" class="tab-content">
+            <div style="text-align: right;"><button class="btn" onclick="loadAllRecords()">🔄 刷新</button></div>
+            <div class="scrollable"><table class="records-table"><thead><tr><th>姓名</th><th>工号</th><th>时间</th><th>类型</th><th>置信度</th></tr></thead><tbody id="allBody"><tr><td colspan="5">加载中...</td></tr></tbody></table></div>
+        </div>
+        <div id="tab-employees" class="tab-content">
+            <div style="text-align: right;"><button class="btn" onclick="loadEmployees()">🔄 刷新</button></div>
+            <div class="scrollable"><table class="records-table"><thead><tr><th>工号</th><th>姓名</th><th>年龄</th><th>性别</th></tr></thead><tbody id="employeesBody"><tr><td colspan="4">加载中...</td></tr></tbody></table></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ----- 摄像头相关 -----
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let currentPhotoData = null;   // 用于注册时暂存拍照的base64
+
+    async function initCamera() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        } catch(e) { alert('无法访问摄像头'); }
+    }
+    initCamera();
+
+    function capture() {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg');
+    }
+
+    // ----- 语音提示（Web Speech API）-----
+    function speak(text) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-CN';
+        utterance.rate = 0.9;
+        window.speechSynthesis.cancel(); // 避免重叠
+        window.speechSynthesis.speak(utterance);
+    }
+
+    // ----- 打卡 -----
+    async function takePhoto(type) {
+        const imageData = capture();
+        const resultDiv = document.getElementById('attendanceResult');
+        resultDiv.className = 'result info';
+        resultDiv.style.display = 'block';
+        resultDiv.innerText = '⏳ 识别中...';
+
+        const formData = new FormData();
+        formData.append('image_data', imageData);
+        formData.append('check_type', type === 'check_out' ? 'check_out' : 'check_in');
+
+        try {
+            const res = await fetch('/attendance', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerText = `✅ ${data.message} (${data.employee.name}) 置信度: ${data.confidence}`;
+                speak(`${data.employee.name} 打卡成功`);
+                loadTodayRecords();
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerText = `❌ ${data.message}`;
+                speak(data.message);
+            }
+        } catch(e) {
+            resultDiv.className = 'result error';
+            resultDiv.innerText = '网络错误';
+        }
+    }
+
+    // ----- 注册准备 -----
+    function prepareRegister() {
+        currentPhotoData = capture();
+        const preview = document.getElementById('registerPreview');
+        const img = document.getElementById('previewImg');
+        img.src = currentPhotoData;
+        preview.style.display = 'block';
+        document.getElementById('registerResult').style.display = 'none';
+    }
+
+    async function registerEmployee() {
+        const empId = document.getElementById('empId').value.trim();
+        const name = document.getElementById('empName').value.trim();
+        const age = document.getElementById('age').value;
+        const gender = document.getElementById('gender').value;
+        if (!empId || !name || !currentPhotoData) {
+            alert('请填写工号、姓名并拍照');
+            return;
+        }
+        const formData = new FormData();
+        formData.append('emp_id', empId);
+        formData.append('name', name);
+        formData.append('age', age);
+        formData.append('gender', gender);
+        formData.append('image_data', currentPhotoData);
+
+        const resultDiv = document.getElementById('registerResult');
+        resultDiv.className = 'result info';
+        resultDiv.style.display = 'block';
+        resultDiv.innerText = '⏳ 注册中...';
+
+        try {
+            const res = await fetch('/register', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                resultDiv.className = 'result success';
+                resultDiv.innerText = `✅ ${data.message}`;
+                speak('注册成功');
+                // 清空表单
+                document.getElementById('empId').value = '';
+                document.getElementById('empName').value = '';
+                document.getElementById('age').value = '';
+                document.getElementById('gender').value = '';
+                document.getElementById('registerPreview').style.display = 'none';
+                currentPhotoData = null;
+                loadEmployees();   // 刷新员工列表
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.innerText = `❌ ${data.message}`;
+                speak(data.message);
+            }
+        } catch(e) {
+            resultDiv.className = 'result error';
+            resultDiv.innerText = '网络错误';
+        }
+    }
+
+    // ----- 加载记录 -----
+    async function loadTodayRecords() {
+        const res = await fetch('/records/today');
+        const data = await res.json();
+        const tbody = document.getElementById('todayBody');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(r => `
+            <tr><td>${r.name}</td><td>${r.emp_id}</td><td>${new Date(r.check_time).toLocaleString()}</td><td>${r.check_type}</td><td>${r.confidence}</td></tr>
+        `).join('');
+    }
+
+    async function loadAllRecords() {
+        const res = await fetch('/records/all');
+        const data = await res.json();
+        const tbody = document.getElementById('allBody');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5">暂无记录</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(r => `
+            <tr><td>${r.name}</td><td>${r.emp_id}</td><td>${new Date(r.check_time).toLocaleString()}</td><td>${r.check_type}</td><td>${r.confidence}</td></tr>
+        `).join('');
+    }
+
+    async function loadEmployees() {
+        const res = await fetch('/employees');
+        const data = await res.json();
+        const tbody = document.getElementById('employeesBody');
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4">暂无员工</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(e => `
+            <tr><td>${e.emp_id}</td><td>${e.name}</td><td>${e.age || '-'}</td><td>${e.gender || '-'}</td></tr>
+        `).join('');
+    }
+
+    // ----- 选项卡切换 -----
+    function switchTab(tab) {
+        ['today', 'all', 'employees'].forEach(t => {
+            document.getElementById(`tab-${t}`).classList.remove('active');
+            document.querySelector(`.tab[onclick*="${t}"]`).classList.remove('active');
+        });
+        document.getElementById(`tab-${tab}`).classList.add('active');
+        if (tab === 'today') loadTodayRecords();
+        if (tab === 'all') loadAllRecords();
+        if (tab === 'employees') loadEmployees();
+    }
+
+    // 初始加载
+    loadTodayRecords();
+    loadEmployees();
+</script>
+</body>
+</html>
