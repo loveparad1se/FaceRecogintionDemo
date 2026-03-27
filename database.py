@@ -32,7 +32,7 @@ class AttendanceDB:
                     check_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     check_type VARCHAR(20) DEFAULT 'check_in',
                     confidence REAL,
-                    FOREIGN KEY (emp_id) REFERENCES employees(emp_id)
+                    FOREIGN KEY (emp_id) REFERENCES employees(emp_id) ON DELETE CASCADE
                 )
             ''')
             conn.commit()
@@ -118,3 +118,51 @@ class AttendanceDB:
                 LIMIT ?
             ''', (limit,))
             return cursor.fetchall()
+
+    # ========== 新增删除功能 ==========
+    
+    def delete_employee(self, emp_id):
+        """删除员工及其打卡记录"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            # 先检查员工是否存在
+            cursor.execute('SELECT emp_id FROM employees WHERE emp_id = ?', (emp_id,))
+            if not cursor.fetchone():
+                return False
+            # 删除打卡记录（由于设置了 ON DELETE CASCADE，也可以不手动删除）
+            cursor.execute('DELETE FROM attendance WHERE emp_id = ?', (emp_id,))
+            # 删除员工
+            cursor.execute('DELETE FROM employees WHERE emp_id = ?', (emp_id,))
+            conn.commit()
+            return True
+
+    def delete_all_attendance(self):
+        """删除所有打卡记录"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM attendance')
+            conn.commit()
+            return True
+
+    def delete_all_employees(self):
+        """删除所有员工（慎用）"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM attendance')
+            cursor.execute('DELETE FROM employees')
+            conn.commit()
+            return True
+
+    def get_employee_count(self):
+        """获取员工总数"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM employees')
+            return cursor.fetchone()[0]
+
+    def get_attendance_count(self):
+        """获取打卡记录总数"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM attendance')
+            return cursor.fetchone()[0]

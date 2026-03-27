@@ -11,7 +11,7 @@ class FaceRecognition:
     """
     定义一个 FaceRecognition 类，用于实现人脸识别
     """
-    def __init__(self, yolo26_weights_path, username, img_path):
+    def __init__(self, yolo26_weights_path, username=None, img_path=None, auto_load=False):
         # 加载 YOLOv8 模型，用于检测图像中的人脸
         self.yolo26_model = YOLO(yolo26_weights_path)
         # 加载 FaceNet 模型，用于提取人脸特征
@@ -19,7 +19,8 @@ class FaceRecognition:
         # 初始化一个字典，用于存储数据库的人脸特征
         self.face_features_db = {}
         # 加载测试图像（数据库）并提取人脸特征
-        self.load_test_images(username, img_path)
+        if auto_load and username and img_path:
+            self.load_test_images(username, img_path)
 
     def preprocess_face_img(self, face_img):
         """
@@ -62,7 +63,7 @@ class FaceRecognition:
             face_embedding_normalized = face_embedding.div(l2_norm)
         # 将得到的特征张量移动到 CPU 上，并转换为 NumPy 数组
         # 这一步是为了后续处理，如保存特征或进行其他非 PyTorch 操作
-        return face_embedding_normalized.cpu().numpy()
+        return face_embedding_normalized.cpu().numpy().flatten()
 
     def load_test_images(self, username, img_path):
         """
@@ -93,32 +94,34 @@ class FaceRecognition:
         print(f'获取到的字典：{self.face_features_db}')
 
     def is_same_person(self, face_feature, threshold=0.7):
+        face_feature = np.asarray(face_feature).ravel()
         """
-        判断两个人脸特征是否属于同一个人,
-        :param face_feature: 待匹配的人脸特征向量。
-        :param threshold: 匹配阈值，只有当相似度超过此阈值时，才认为匹配成功。
-        :return: 如果找到匹配的人脸，则返回匹配的人脸名称；否则返回 "unknown"。
+        判断人脸特征是否属于数据库中的人
+        :param face_feature: 待匹配的人脸特征向量 (numpy array)
+        :param threshold: 匹配阈值
+        :return: 匹配的人名或 "unknown"
         """
-        # 初始化最大相似度为-1.0，因为我们正在寻找最大值
-        max_similarity = -1.0  # 初始设置为-1，因为余弦相似度的范围是[-1, 1]
-        # 如果没有匹配项，返回"unknown"
+        max_similarity = -1.0
         matched_name = "unknown"
-        # 遍历数据库中的所有特征向量及其对应的姓名
+
+        # 确保输入特征是一维数组
+        feat = face_feature.flatten()
+    
         for name, db_feature in self.face_features_db.items():
-            # 计算输入特征向量与数据库中特征向量的余弦相似度
-            # 余弦相似度计算公式是两个向量的点积除以它们的范数的乘积
-            similarity = np.dot(face_feature, db_feature.T) / (
-                    np.linalg.norm(face_feature) * np.linalg.norm(db_feature))
-            # 打印相似度，用于调试
-            print(f'similarity: {similarity}')
-            # 如果当前相似度大于已记录的最大相似度，则更新最大相似度和匹配的人名
+            # 确保数据库特征也是一维数组
+            db_feat = db_feature.flatten()
+        
+            # 计算余弦相似度
+            dot_product = np.dot(feat, db_feat)
+            norm_product = np.linalg.norm(feat) * np.linalg.norm(db_feat)
+            similarity = dot_product / (norm_product + 1e-8)  # 加小值防止除零
+        
+            print(f'{name} similarity: {similarity:.4f}')
+        
             if similarity > max_similarity:
-                # 更新最大相似度
                 max_similarity = similarity
-                # 更新匹配的人名
                 matched_name = name
-        # 如果最大相似度大于等于设定的阈值，则认为找到了匹配的人脸
-        # 否则，返回 "unknown"
+    
         return matched_name if max_similarity > threshold else "unknown"
 
     def draw_results(self, frame, boxes):
