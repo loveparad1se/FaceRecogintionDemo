@@ -190,7 +190,7 @@ class FaceRecognition:
 
 if __name__ == '__main__':
     # 定义 YOLOv8 模型权重文件的路径
-    yolo26_weights_path = './runs/detect/Facenet/exp17/weights/best.pt'
+    yolo26_weights_path = './runs/detect/Facenet/exp1/weights/best.pt'
     # 定义测试图像的目录路径
     img_path = ''
     username = ''

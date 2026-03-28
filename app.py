@@ -16,7 +16,7 @@ db = AttendanceDB('face_attendance.db')
 
 # ---------- 初始化人脸识别器 ----------
 recognizer = FaceRecognition(
-    yolo26_weights_path='./runs/detect/Facenet/exp17/weights/best.pt',
+    yolo26_weights_path='./runs/detect/Facenet/exp1/weights/best.pt',
     username='',
     img_path='',
     auto_load=False,
