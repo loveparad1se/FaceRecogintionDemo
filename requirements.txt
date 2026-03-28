@@ -1,0 +1,7 @@
+facenet-pytorch==2.6.0
+Flask==2.0.3
+numpy==1.26.4
+opencv-python==4.13.0.92
+torch==2.2.2
+torchvision==0.17.2
+ultralytics==8.4.26
