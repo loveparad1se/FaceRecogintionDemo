@@ -80,7 +80,7 @@ class FaceRecognition:
             # 将边界框的坐标（x1, y1, x2, y2）和类别转换为列表形式
             # 注意：xyxy表示边界框的坐标格式，即(x_min, y_min, x_max, y_max)
             x1, y1, x2, y2 = box.xyxy[0].tolist()
-            cls = box.cls[0].tolist()
+            cls = box.cls[0].item()
             # 检查检测到的类别是否为 0 (0 是人脸)
             if cls == 0:
                 # 根据边界框的坐标从原图像中裁剪出人脸区域
