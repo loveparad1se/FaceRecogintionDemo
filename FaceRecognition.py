@@ -136,7 +136,7 @@ class FaceRecognition:
             # 解包人脸框的坐标信息，xyxy是一个包含左上角和右下角坐标的列表
             x1, y1, x2, y2 = box.xyxy[0].tolist()
             # 提取类别标签，这里类别 0 代表人脸
-            cls = box.cls[0].tolist()
+            cls = box.cls[0].item()
             # 如果类别标签为0（即为人脸）
             if cls == 0:
                 # 在原始帧上画一个红色的框来标记人脸

@@ -87,7 +87,8 @@
 
 判断，如果传入了True，姓名，图片，此时才会调用FaceRecognition类的功能函数跑起来(app.py调用类)
 只有测试时时才会调用self.load_test_images(username, img_path)这个方法
-打卡时调用face_recognition.open_camera()
+注册和打卡时app.py调用了
+
 
 
 
@@ -107,6 +108,32 @@
 对预处理后的图像进行特征提取
 使用提取的特征和数据库的特征逐一比较，确定匹配的姓名
 在人脸方框上绘制匹配的人脸名称
+
+
+
+
+results (列表)
+│
+├── results[0] → 第一张图片的结果对象
+│   │
+│   ├── results[0].boxes → 第一张图片的所有检测框集合
+│   │   │
+│   │   ├── boxes[0] → 第一个检测框对象
+│   │   │   └── box.cls → tensor([0]) 类别张量
+│   │   │       └── box.cls[0] → tensor(0) 单个类别值
+│   │   │           └── box.cls[0].item() → 0 (Python int)
+│   │   │
+│   │   ├── boxes[1] → 第二个检测框对象
+│   │   │   └── box.cls → tensor([1]) 类别张量
+│   │   │
+│   │   └── boxes[2] → 第三个检测框对象
+│   │       └── ...
+│   │
+│   └── results[0].masks → 第一张图片的分割掩码（如果有）
+│
+├── results[1] → 第二张图片的结果对象
+│   └── ...
+└── ...
 
 
 

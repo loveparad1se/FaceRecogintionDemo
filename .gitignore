@@ -6,3 +6,4 @@ echo "*.pt" >> .gitignore
 echo "*.pth" >> .gitignore
 echo "*.onnx" >> .gitignore
 echo "dataset/" >> .gitignore
+echo "*.txt" >> .gitignore
